@@ -1,0 +1,14 @@
+{
+  "name": "Zero-Click Dev Environment",
+  "image": "mcr.microsoft.com/devcontainers/universal:linux",
+  "postCreateCommand": "bash setup.sh",
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "bash"
+      },
+      "extensions": []
+    }
+  },
+  "forwardPorts": []
+}
