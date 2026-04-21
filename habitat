@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# 🧬 Habitat CLI — unified control plane
+# Commands:
+#   habitat deploy
+#   habitat scale <n>
+#   habitat heal
+
+CMD="${1:-}"
+
+if [[ -z "$CMD" ]]; then
+  echo "🧬 Habitat CLI"
+  echo "Usage:"
+  echo "  habitat deploy"
+  echo "  habitat scale <n>"
+  echo "  habitat heal"
+  exit 1
+fi
+
+DEPLOY() {
+  echo "🚀 Deploying habitat..."
+  docker compose up -d --build
+  echo "✨ Habitat deployed"
+  docker compose ps
+}
+
+SCALE() {
+  SIZE="${2:-}"
+
+  if [[ -z "$SIZE" ]]; then
+    echo "❌ Missing scale value"
+    echo "Usage: habitat scale <n>"
+    exit 1
+  fi
+
+  echo "⚙️ Scaling habitat app layer to $SIZE nodes..."
+  docker compose up -d --scale app="$SIZE"
+  echo "✨ Scaling complete"
+  docker compose ps
+}
+
+HEAL() {
+  echo "🧠 Healing habitat..."
+
+  echo "🔄 Restarting core services"
+  docker compose restart app db redis orchestrator agent || true
+
+  echo "🩺 Verifying system state"
+  sleep 3
+  docker compose ps
+
+  echo "✨ Healing complete"
+}
+
+case "$CMD" in
+  deploy)
+    DEPLOY
+    ;;
+  scale)
+    SCALE "$@"
+    ;;
+  heal)
+    HEAL
+    ;;
+  *)
+    echo "❌ Unknown command: $CMD"
+    echo "Use: habitat deploy | scale | heal"
+    exit 1
+    ;;
+esac
