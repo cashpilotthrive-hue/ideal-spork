@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DevSecOps Security Console</title>
+<style>
+:root{color-scheme:dark;font:15px/1.5 system-ui,sans-serif;background:#0b1020;color:#e8edf7}
+*{box-sizing:border-box}body{margin:0;padding:32px;max-width:1200px;margin:auto}
+header{display:flex;justify-content:space-between;gap:20px;align-items:center;flex-wrap:wrap}
+h1{font-size:clamp(26px,4vw,40px);margin:0}.muted{color:#9aa8bf}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin:24px 0}
+.card{background:#151e32;border:1px solid #2b3852;border-radius:14px;padding:18px}
+.card h2{font-size:18px;margin:0 0 8px}.status{font-weight:650}.ok{color:#73d6a2}.bad{color:#ff8d8d}.wait{color:#f4c96b}
+a{color:#9bc4ff;text-decoration:none}a:hover{text-decoration:underline}
+button{background:#243653;color:#fff;border:1px solid #486184;border-radius:8px;padding:9px 14px;cursor:pointer}
+ul{padding-left:18px}.run{border-top:1px solid #2b3852;padding:10px 0}.small{font-size:13px}
+</style></head>
+<body>
+<header><div><p class="muted">CASH PILOT THRIVE · SECURITY OPERATIONS</p><h1>DevSecOps Security Console</h1><p class="muted">GitHub Actions and Burp Suite DAST overview</p></div><button id="refresh">Refresh status</button></header>
+<div class="grid" id="repos"><section class="card"><p class="muted">Loading repository status…</p></section></div>
+<section class="card"><h2>Security operating notes</h2>
+<ul><li>CodeQL, Gitleaks and Trivy results are available in each repository’s Actions and Security tabs.</li>
+<li>Burp DAST runs only after repository variables and secrets are configured.</li>
+<li>Production scans require the explicit <code>AUTHORIZED</code> input and approval on the protected GitHub Environment.</li>
+<li>Review scan scope and exclude destructive actions, logout, payment, identity-provider and third-party hosts unless explicitly authorized.</li></ul>
+<p class="small muted">This dashboard reads public GitHub Actions run metadata. Detailed findings remain in GitHub Security and workflow artifacts.</p></section>
+<script>
+const repos=["cashpilotthrive-hue/openai-chatkit-starter-app","cashpilotthrive-hue/next-saas-stripe-starter"];
+const root=document.querySelector("#repos");
+async function refresh(){
+ root.innerHTML="";
+ for(const repo of repos){
+  const card=document.createElement("section");card.className="card";
+  const h=document.createElement("h2");h.textContent=repo.split("/")[1];card.append(h);
+  const p=document.createElement("p");p.className="muted";p.textContent="Fetching latest workflow runs…";card.append(p);root.append(card);
+  try{
+   const res=await fetch("https://api.github.com/repos/"+repo+"/actions/runs?per_page=5");
+   if(!res.ok)throw new Error("GitHub API "+res.status);
+   const data=await res.json();p.textContent=data.workflow_runs.length+" recent runs";
+   for(const run of data.workflow_runs){
+    const row=document.createElement("div");row.className="run";
+    const state=document.createElement("span");state.className="status "+(run.conclusion==="success"?"ok":run.conclusion==="failure"?"bad":"wait");
+    state.textContent=(run.conclusion||run.status||"unknown").toUpperCase();
+    const link=document.createElement("a");link.href=run.html_url;link.target="_blank";link.rel="noopener";link.textContent=run.name+" · "+new Date(run.created_at).toLocaleString();
+    row.append(state,document.createTextNode(" "),link);card.append(row);
+   }
+   if(!data.workflow_runs.length)p.textContent="No workflow runs found yet.";
+  }catch(e){p.textContent="Status unavailable: "+e.message;}
+ }
+}
+document.querySelector("#refresh").addEventListener("click",refresh);refresh();
+</script></body></html>
